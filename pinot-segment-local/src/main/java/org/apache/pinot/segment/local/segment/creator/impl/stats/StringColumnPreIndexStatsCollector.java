@@ -59,7 +59,11 @@ public class StringColumnPreIndexStatsCollector extends AbstractColumnStatistics
       Object[] values = (Object[]) entry;
       int rowLength = 0;
       for (Object obj : values) {
-        String value = (String) obj;
+        // Tolerate column readers that produce non-String text wrappers (e.g. Arrow's
+        // org.apache.arrow.vector.util.Text). The cast was unconditional, which
+        // surfaced as ClassCastException at runtime for any ColumnReaderFactory other
+        // than PinotSegmentColumnReaderFactory in the column-major build path.
+        String value = obj instanceof String ? (String) obj : obj.toString();
         if (_clpStatsCollector != null) {
           _clpStatsCollector.collect(value);
         }
@@ -77,7 +81,8 @@ public class StringColumnPreIndexStatsCollector extends AbstractColumnStatistics
       _maxRowLength = Math.max(_maxRowLength, rowLength);
       updateTotalNumberOfEntries(values);
     } else {
-      String value = (String) entry;
+      // See note above on tolerating non-String text wrappers.
+      String value = entry instanceof String ? (String) entry : entry.toString();
       addressSorted(value);
       if (_clpStatsCollector != null) {
         _clpStatsCollector.collect(value);

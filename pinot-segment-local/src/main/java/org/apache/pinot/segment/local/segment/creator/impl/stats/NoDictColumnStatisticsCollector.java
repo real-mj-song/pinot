@@ -93,7 +93,8 @@ public class NoDictColumnStatisticsCollector extends AbstractColumnStatisticsCol
           _minLength = Math.min(_minLength, length);
           _maxLength = Math.max(_maxLength, length);
           if (_isAscii) {
-            _isAscii = length == ((String) value).length();
+            String stringValue = value instanceof String ? (String) value : value.toString();
+            _isAscii = length == stringValue.length();
           }
           rowLength += length;
         }
@@ -151,7 +152,8 @@ public class NoDictColumnStatisticsCollector extends AbstractColumnStatisticsCol
         _minLength = Math.min(_minLength, length);
         _maxLength = Math.max(_maxLength, length);
         if (_isAscii) {
-          _isAscii = length == ((String) entry).length();
+          String stringValue = entry instanceof String ? (String) entry : entry.toString();
+          _isAscii = length == stringValue.length();
         }
       }
       if (isPartitionEnabled()) {
@@ -185,7 +187,10 @@ public class NoDictColumnStatisticsCollector extends AbstractColumnStatisticsCol
       case BIG_DECIMAL:
         return BigDecimalUtils.byteSize((BigDecimal) value);
       case STRING:
-        return Utf8.encodedLength((String) value);
+        // Tolerate column readers that produce non-String text wrappers (e.g. Arrow's
+        // org.apache.arrow.vector.util.Text). See StringColumnPreIndexStatsCollector for
+        // the same defensive widening in the dictionary-backed path.
+        return Utf8.encodedLength(value instanceof String ? (String) value : value.toString());
       case BYTES:
         return ((byte[]) value).length;
       default:
